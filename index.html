@@ -886,7 +886,7 @@
             const label = candidateDate
               ? formatLocalTime(candidateDate, timezone)
               : formatLocalTime(payload?.localTime, timezone);
-            localTimeElement.textContent = `Local time · ${label}`;
+            localTimeElement.textContent = `Data time· ${label}`;
           };
 
           updateLocalTime();
@@ -1018,9 +1018,6 @@
                 <p class="info-card__condition">${escapeHtml(
                   conditionDescription
                 )}</p>
-                <p class="info-card__text" data-role="local-time">Local time · ${escapeHtml(
-                  localTime
-                )}</p>
                 ${
                   forecastHigh !== null && forecastLow !== null
                     ? `<p class="info-card__text">High ${escapeHtml(
@@ -1090,9 +1087,6 @@
           lastRefreshMinutes = intervalMinutes;
         }
 
-        //
-        // --- THIS IS THE REPLACED FUNCTION ---
-        //
         async function loadWeather({ silent = false, forced = false } = {}) {
           const configuredMinutes = sanitizeNumber(
             window.SKYARC_REFRESH_MINUTES,
