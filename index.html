@@ -558,7 +558,6 @@
         const infoCard = document.getElementById('infoCard');
         const metricsCard = document.getElementById('metricsCard');
         const locationText = document.getElementById('locationText');
-        const refreshText = document.getElementById('refreshText');
         const lastUpdatedText = document.getElementById('lastUpdatedText');
 
         if (!infoCard || !metricsCard) {
@@ -676,15 +675,23 @@
           }
         }
 
-        function formatLastUpdated(lastUpdated) {
+        function formatLastUpdated(lastUpdated, timezone) {
           if (!lastUpdated) return '—';
           const candidate =
-            lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
+            lastUpdated instanceof Date ? new Date(lastUpdated.getTime()) : new Date(lastUpdated);
           if (Number.isNaN(candidate.getTime())) return '—';
-          return candidate.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          });
+          try {
+            return new Intl.DateTimeFormat([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: timezone || undefined
+            }).format(candidate);
+          } catch {
+            return candidate.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          }
         }
 
         function getLocalHour(dateISO, timezone) {
@@ -909,8 +916,6 @@
             </div>
           `;
           if (locationText) locationText.textContent = '—';
-          if (refreshText)
-            refreshText.textContent = `Auto-refresh every ${lastRefreshMinutes} min`;
           if (lastUpdatedText) lastUpdatedText.textContent = 'Loading…';
         }
 
@@ -934,8 +939,6 @@
               ${buildMetricsMarkup(resolveMetrics([]))}
             </div>
           `;
-          if (refreshText)
-            refreshText.textContent = `Auto-refresh every ${lastRefreshMinutes} min`;
           if (lastUpdatedText) lastUpdatedText.textContent = 'Update failed';
           const retryButton = document.getElementById('weatherRetryButton');
           if (retryButton) {
@@ -1048,9 +1051,6 @@
               locationLabel ||
               DEFAULT_LOCATION_NAME ||
               'Awaiting location details';
-          }
-          if (refreshText) {
-            refreshText.textContent = `Auto-refresh every ${refreshInterval} min`;
           }
           if (lastUpdatedText) {
             lastUpdatedText.textContent =
