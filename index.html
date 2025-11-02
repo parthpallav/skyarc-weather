@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skyarc Weather App</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family: 'Inter', 'SF Pro Display', 'SF Pro Text', -apple-system,
+          BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: #020617;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background-color: #020617;
+        color: #fff;
+        line-height: 1.5;
+      }
+
+      img {
+        display: block;
+        max-width: 100%;
+      }
+
+      .weather-app {
+        position: relative;
+        min-height: 100vh;
+        overflow: hidden;
+        background-color: #020617;
+      }
+
+      .weather-bg-video {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -20;
+      }
+
+      .weather-bg-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          140deg,
+          rgba(15, 23, 42, 0.9),
+          rgba(30, 41, 59, 0.55),
+          rgba(30, 41, 59, 0.35)
+        );
+        z-index: -10;
+      }
+
+      .weather-shell {
+        position: relative;
+        z-index: 10;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 2.5rem 1.5rem;
+      }
+
+      @media (min-width: 768px) {
+        .weather-shell {
+          padding: 3.5rem 3.5rem;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .weather-shell {
+          padding-left: 5rem;
+          padding-right: 5rem;
+        }
+      }
+
+      .weather-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+      }
+
+      .logo-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      @media (min-width: 768px) {
+        .logo-group {
+          flex-direction: row;
+          align-items: center;
+          gap: 1.5rem;
+        }
+      }
+
+      .logo-tagline {
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .live-indicator {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .pulse {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 12px;
+        height: 12px;
+      }
+
+      .pulse .ping {
+        position: absolute;
+        inset: 0;
+        border-radius: 9999px;
+        background-color: rgba(239, 68, 68, 0.7);
+        animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+
+      .pulse .dot {
+        position: relative;
+        width: 12px;
+        height: 12px;
+        border-radius: 9999px;
+        background-color: #ef4444;
+      }
+
+      @keyframes ping {
+        0% {
+          transform: scale(0.75);
+          opacity: 1;
+        }
+        80%,
+        100% {
+          transform: scale(2);
+          opacity: 0;
+        }
+      }
+
+      .weather-main {
+        flex: 1;
+        margin-top: 3rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2.5rem;
+      }
+
+      @media (min-width: 1280px) {
+        .weather-main {
+          grid-template-columns: 1.8fr 1fr;
+        }
+      }
+
+      .info-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border-radius: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        padding: clamp(2rem, 4vw, 3rem);
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.2),
+          rgba(255, 255, 255, 0.1),
+          rgba(255, 255, 255, 0.05)
+        );
+        box-shadow: 0 45px 110px rgba(8, 5, 30, 0.5);
+        backdrop-filter: blur(55px);
+        -webkit-backdrop-filter: blur(55px);
+      }
+
+      .info-card__header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .info-card__city {
+        margin: 0;
+        font-size: clamp(3.5rem, 8vw, 4.5rem);
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .info-card__region {
+        margin-top: 0.75rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .info-card__timezone {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 0.35rem 1.1rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .info-card__body {
+        margin-top: clamp(2.25rem, 5vw, 3rem);
+        display: grid;
+        gap: 2.5rem;
+        align-items: end;
+      }
+
+      @media (min-width: 1024px) {
+        .info-card__body {
+          grid-template-columns: 1fr auto;
+        }
+      }
+
+      .info-card__temp {
+        margin: 0;
+        font-size: clamp(6rem, 13vw, 8.5rem);
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .info-card__feels {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .info-card__details {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.75rem;
+        text-align: right;
+      }
+
+      .info-card__condition {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        font-weight: 600;
+        text-transform: capitalize;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .info-card__text {
+        margin: 0;
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .info-card__footer {
+        margin-top: auto;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 1.25rem 1.5rem;
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.75);
+        line-height: 1.6;
+      }
+
+      .metrics-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border-radius: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        padding: clamp(2rem, 4vw, 2.75rem);
+        background-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 40px 110px rgba(8, 5, 30, 0.45);
+        backdrop-filter: blur(45px);
+        -webkit-backdrop-filter: blur(45px);
+      }
+
+      .metrics-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .metrics-card__title {
+        margin: 0;
+        font-size: 0.85rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .metrics-card__badge {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 9999px;
+        padding: 0.35rem 1rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.65);
+      }
+
+      .metrics-card__list {
+        margin-top: 2rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .metric-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        border-radius: 24px;
+        background-color: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 18px 45px rgba(8, 5, 30, 0.35);
+      }
+
+      .metric-label {
+        font-size: 0.75rem;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .metric-value {
+        font-size: 1.9rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .weather-footer {
+        margin-top: 3rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .weather-footer .divider {
+        width: 1.5rem;
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+
+      .status-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        text-align: center;
+        min-height: 280px;
+      }
+
+      .status-card p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .status-card button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 9999px;
+        background-color: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 0.75rem;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        padding: 0.65rem 1.75rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .status-card button:hover {
+        background-color: rgba(255, 255, 255, 0.22);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+
+      .loader-ring {
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 9999px;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top-color: rgba(255, 255, 255, 0.9);
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (max-width: 600px) {
+        .weather-shell {
+          padding: 2.25rem 1.25rem;
+        }
+
+        .info-card__details {
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .live-indicator {
+          gap: 0.75rem;
+          letter-spacing: 0.3em;
+        }
+
+        .metric-value {
+          font-size: 1.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="weather-app">
+      <video
+        class="weather-bg-video"
+        src=""
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+      ></video>
+      <div class="weather-bg-overlay" aria-hidden="true"></div>
+
+      <div class="weather-shell">
+        <header class="weather-header">
+          <div class="logo-group">
+            <img
+              class="logo-image"
+              src="https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/skyarc-tm-white.png"
+              alt="Skyarc Logo"
+              height="56"
+            />
+            <p class="logo-tagline">Real-time weather intelligence</p>
+          </div>
+          <div class="live-indicator">
+            <span class="pulse" aria-hidden="true">
+              <span class="ping"></span>
+              <span class="dot"></span>
+            </span>
+            <span>Live</span>
+            <span id="lastUpdatedText" class="last-updated">Updated —</span>
+          </div>
+        </header>
+
+        <main class="weather-main">
+          <section class="info-card" id="infoCard" aria-label="Current weather">
+            </section>
+          <section
+            class="metrics-card"
+            id="metricsCard"
+            aria-label="Weather metrics"
+          >
+            </section>
+        </main>
+
+        <footer class="weather-footer">
+          <span id="locationText">—</span>
+          <span class="divider" aria-hidden="true"></span>
+          <span id="refreshText">Auto-refresh every 30 min</span>
+        </footer>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        // --- KEY CHANGES ---
+        // We have REMOVED:
+        // - ACCUWEATHER_API_KEY (This is now secret on the backend)
+        // - ACCUWEATHER_LOCATION_KEY (This is now set on the backend)
+        // - ACCUWEATHER_BASE_URL (We no longer call AccuWeather directly)
+        // - mapMetrics() function (Moved to backend)
+        // - assemblePayload() function (Moved to backend)
+        // - buildApiUrl() function (Moved to backend)
+        //
+        // We have REPLACED:
+        // - loadWeather() function (It now calls /api/weather)
+        // -----------------
+
+        const DEFAULT_LOCATION_NAME =
+          window.SKYARC_LOCATION_NAME || 'Configured Skyline';
+        const DEFAULT_REFRESH_MINUTES = 30;
+
+        const DISPLAY_METRIC_KEYS = [
+          'pressure',
+          'uvIndex',
+          'wind',
+          'visibility'
+        ];
+        const METRIC_LABELS = {
+          pressure: 'Pressure',
+          uvIndex: 'UV Index',
+          wind: 'Wind',
+          visibility: 'Visibility'
+        };
+
+        const SCENE_VIDEOS = {
+          day_sunny:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/clear.mp4',
+          day_cloudy:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/cloudy.mp4',
+          day_rain:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/rain_small.mp4',
+          day_fog:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/fog.mp4',
+          night_clear:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/starnight.mp4',
+          night_clouds:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/cloudy.mp4',
+          night_rain:
+            'https://pub-66b9b94f13624f3f851e37c47a56a4e4.r2.dev/rain_small.mp4'
+        };
+
+        const CACHE_STORAGE_KEY = 'skyarc-weather-cache-v1';
+        let refreshTimerId = null;
+        let localTimeTimerId = null;
+        let lastRefreshMinutes = DEFAULT_REFRESH_MINUTES;
+        let lastFetchTimestamp = null;
+
+        const infoCard = document.getElementById('infoCard');
+        const metricsCard = document.getElementById('metricsCard');
+        const locationText = document.getElementById('locationText');
+        const refreshText = document.getElementById('refreshText');
+        const lastUpdatedText = document.getElementById('lastUpdatedText');
+
+        if (!infoCard || !metricsCard) {
+          console.error('Weather layout not found in document.');
+          return;
+        }
+
+        // --- All your original helper functions are kept ---
+        // (sanitizeNumber, read/write/clear cache, escapeHtml, formatters, etc.)
+
+        function sanitizeNumber(value, fallback) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+        }
+
+        function readWeatherCache() {
+          if (typeof window === 'undefined' || !window.localStorage) return null;
+          try {
+            const raw = window.localStorage.getItem(CACHE_STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            return parsed;
+          } catch (error) {
+            console.warn('Unable to read weather cache', error);
+            return null;
+          }
+        }
+
+        function writeWeatherCache(payload, refreshMinutes) {
+          if (typeof window === 'undefined' || !window.localStorage) return;
+          try {
+            const entry = {
+              storedAt: Date.now(),
+              refreshIntervalMinutes: sanitizeNumber(
+                refreshMinutes,
+                DEFAULT_REFRESH_MINUTES
+              ),
+              payload
+            };
+            window.localStorage.setItem(
+              CACHE_STORAGE_KEY,
+              JSON.stringify(entry)
+            );
+          } catch (error) {
+            console.warn('Unable to persist weather cache', error);
+          }
+        }
+
+        function clearWeatherCache() {
+          if (typeof window === 'undefined' || !window.localStorage) return;
+          try {
+            window.localStorage.removeItem(CACHE_STORAGE_KEY);
+          } catch (error) {
+            console.warn('Unable to clear weather cache', error);
+          }
+        }
+
+        function escapeHtml(value) {
+          return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function formatRegion(region) {
+          if (!region) return '';
+          return region
+            .split(',')
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .join(', ');
+        }
+
+        function parseLocation(name = DEFAULT_LOCATION_NAME) {
+          const parts = String(name)
+            .split(',')
+            .map((part) => part.trim())
+            .filter(Boolean);
+          return {
+            city: parts[0] || name,
+            region: parts.slice(1).join(', ')
+          };
+        }
+
+        function formatTimezone(timezone) {
+          if (!timezone) return '';
+          return String(timezone).replace(/_/g, ' ');
+        }
+
+        function formatLocalTime(localTime, timezone) {
+          if (!localTime) return 'Time lost in the clouds';
+          const candidate =
+            localTime instanceof Date
+              ? new Date(localTime.getTime())
+              : new Date(localTime);
+          if (Number.isNaN(candidate.getTime())) {
+            return typeof localTime === 'string'
+              ? localTime
+              : 'Time lost in the clouds';
+          }
+          try {
+            return new Intl.DateTimeFormat([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: timezone || undefined
+            }).format(candidate);
+          } catch {
+            return candidate.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          }
+        }
+
+        function formatLastUpdated(lastUpdated) {
+          if (!lastUpdated) return '—';
+          const candidate =
+            lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
+          if (Number.isNaN(candidate.getTime())) return '—';
+          return candidate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+
+        function getLocalHour(dateISO, timezone) {
+          const baseDate = dateISO ? new Date(dateISO) : new Date();
+          try {
+            const formatter = new Intl.DateTimeFormat('en-US', {
+              hour: 'numeric',
+              hour12: false,
+              timeZone: timezone || undefined
+            });
+            return Number.parseInt(formatter.format(baseDate), 10);
+          } catch {
+            return baseDate.getHours();
+          }
+        }
+
+        function sceneFromIcon(iconCode, isNightFallback) {
+          if (!Number.isFinite(iconCode)) return null;
+          const code = Number(iconCode);
+          const iconIsNight = code >= 33;
+          const isNight = iconIsNight || isNightFallback;
+
+          if ([1, 2, 3, 4, 5].includes(code)) {
+            return isNight ? 'night_clear' : 'day_sunny';
+          }
+
+          if ([6, 7, 8, 37, 38].includes(code)) {
+            return isNight ? 'night_clouds' : 'day_cloudy';
+          }
+
+          if ([12, 13, 14, 15, 16, 17, 18, 39, 40, 41, 42].includes(code)) {
+            return isNight ? 'night_rain' : 'day_rain';
+          }
+
+          if ([19, 20, 21, 22, 23, 24, 25, 26, 29, 43, 44].includes(code)) {
+            return isNight ? 'night_clouds' : 'day_cloudy';
+          }
+
+          if (code === 11) {
+            return isNight ? 'night_clouds' : 'day_fog';
+          }
+
+          return isNight ? 'night_clouds' : 'day_cloudy';
+        }
+
+        function determineScene(payload) {
+          if (!payload) return 'day_cloudy';
+          const description = String(
+            payload.conditions?.description || ''
+          ).toLowerCase();
+          const hour = getLocalHour(payload.localTime, payload.timezone);
+          const conditionInfo = payload.conditions || {};
+          const isNight =
+            conditionInfo.isDayTime === true
+              ? false
+              : conditionInfo.isDayTime === false
+              ? true
+              : hour >= 19 || hour < 5;
+
+          const precipType = String(
+            conditionInfo.precipitationType || ''
+          ).toLowerCase();
+          const hasPrecip = conditionInfo.hasPrecipitation;
+          const isRain = hasPrecip
+            ? /rain|shower|drizzle|thunder|storm/.test(precipType)
+            : /rain|storm|shower|drizzle|thunder/.test(description);
+          const isFog = /fog|mist|haze|smoke/.test(description);
+          const isCloud = /cloud|overcast/.test(description);
+          const isClear = /sunny|clear/.test(description);
+
+          const iconScene = sceneFromIcon(conditionInfo.icon, isNight);
+          if (iconScene) return iconScene;
+          if (isFog) return isNight ? 'night_clouds' : 'day_fog';
+          if (isRain) return isNight ? 'night_rain' : 'day_rain';
+          if (isCloud) return isNight ? 'night_clouds' : 'day_cloudy';
+          if (isNight) return isClear ? 'night_clear' : 'night_clouds';
+          return isClear ? 'day_sunny' : 'day_cloudy';
+        }
+
+        function resolveMetrics(metrics = []) {
+          const lookup = new Map(metrics.map((metric) => [metric.key, metric]));
+          return DISPLAY_METRIC_KEYS.map((key) => {
+            const metric = lookup.get(key);
+            if (metric) {
+              const label =
+                metric.label || METRIC_LABELS[key] || key.toUpperCase();
+              const displayValue =
+                metric.display == null ? '—' : String(metric.display);
+              return {
+                key,
+                label,
+                display: displayValue
+              };
+            }
+            return {
+              key,
+              label: METRIC_LABELS[key] || key.toUpperCase(),
+              display: '—'
+            };
+          });
+        }
+
+        function buildMetricsMarkup(metrics) {
+          return metrics
+            .map(
+              (metric) => `
+            <div class="metric-row">
+              <span class="metric-label">${escapeHtml(metric.label)}</span>
+              <span class="metric-value">${escapeHtml(metric.display)}</span>
+            </div>
+          `
+            )
+            .join('');
+        }
+
+        function setVideoScene(sceneKey) {
+          const videoElement = document.querySelector('.weather-bg-video');
+          if (!videoElement) return;
+          const sceneSource =
+            SCENE_VIDEOS[String(sceneKey)] || SCENE_VIDEOS.day_cloudy;
+
+          videoElement.muted = true;
+          videoElement.defaultMuted = true;
+          videoElement.autoplay = true;
+          videoElement.loop = true;
+          videoElement.playsInline = true;
+
+          if (videoElement.getAttribute('src') !== sceneSource) {
+            videoElement.src = sceneSource;
+          }
+
+          const attemptPlay = () => {
+            const playPromise = videoElement.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+              playPromise.catch(() => {
+                videoElement.muted = true;
+                videoElement.play().catch(() => {});
+              });
+            }
+          };
+
+          if (videoElement.readyState >= 2) {
+            attemptPlay();
+          } else {
+            videoElement.addEventListener('loadeddata', attemptPlay, {
+              once: true
+            });
+          }
+        }
+
+        function stopLocalTimeTicker() {
+          if (localTimeTimerId) {
+            window.clearInterval(localTimeTimerId);
+            localTimeTimerId = null;
+          }
+        }
+
+        function setupLocalTimeTicker(payload) {
+          stopLocalTimeTicker();
+
+          const localTimeElement = infoCard?.querySelector(
+            '[data-role="local-time"]'
+          );
+          if (!localTimeElement) return;
+
+          const timezone = payload?.timezone || '';
+          const baseLocal = payload?.localTime
+            ? new Date(payload.localTime)
+            : null;
+          const fetchedAt = payload?.fetchedAt
+            ? new Date(payload.fetchedAt)
+            : null;
+
+          const baseDateValid = baseLocal && !Number.isNaN(baseLocal.getTime());
+          const fetchedDateValid =
+            fetchedAt && !Number.isNaN(fetchedAt.getTime());
+          const canTick = baseDateValid || Boolean(timezone);
+
+          const computeCurrentDate = () => {
+            if (baseDateValid && fetchedDateValid) {
+              const elapsed = Date.now() - fetchedAt.getTime();
+              return new Date(baseLocal.getTime() + elapsed);
+            }
+            if (baseDateValid) {
+              return new Date(baseLocal.getTime());
+            }
+            return timezone ? new Date() : null;
+          };
+
+          const updateLocalTime = () => {
+            const candidateDate = computeCurrentDate();
+            const label = candidateDate
+              ? formatLocalTime(candidateDate, timezone)
+              : formatLocalTime(payload?.localTime, timezone);
+            localTimeElement.textContent = `Local time · ${label}`;
+          };
+
+          updateLocalTime();
+
+          if (!canTick) {
+            return;
+          }
+
+          localTimeTimerId = window.setInterval(updateLocalTime, 1000);
+        }
+
+        function renderLoading() {
+          stopLocalTimeTicker();
+          infoCard.innerHTML = `
+            <div class="status-card">
+              <span class="loader-ring" aria-hidden="true"></span>
+              <p>Loading live weather…</p>
+            </div>
+          `;
+          metricsCard.innerHTML = `
+            <div class="metrics-card__header">
+              <h2 class="metrics-card__title">Atmospheric Scorecard</h2>
+              <span class="metrics-card__badge">Metrics</span>
+            </div>
+            <div class="metrics-card__list">
+              ${buildMetricsMarkup(resolveMetrics([]))}
+            </div>
+          `;
+          if (locationText) locationText.textContent = '—';
+          if (refreshText)
+            refreshText.textContent = `Auto-refresh every ${lastRefreshMinutes} min`;
+          if (lastUpdatedText) lastUpdatedText.textContent = 'Loading…';
+        }
+
+        function renderError(message) {
+          stopLocalTimeTicker();
+          const safeMessage = escapeHtml(
+            message || 'Unable to fetch weather right now.'
+          );
+          infoCard.innerHTML = `
+            <div class="status-card">
+              <p>${safeMessage}</p>
+              <button type="button" id="weatherRetryButton">Try Again</button>
+            </div>
+          `;
+          metricsCard.innerHTML = `
+            <div class="metrics-card__header">
+              <h2 class="metrics-card__title">Atmospheric Scorecard</h2>
+              <span class="metrics-card__badge">Metrics</span>
+            </div>
+            <div class="metrics-card__list">
+              ${buildMetricsMarkup(resolveMetrics([]))}
+            </div>
+          `;
+          if (refreshText)
+            refreshText.textContent = `Auto-refresh every ${lastRefreshMinutes} min`;
+          if (lastUpdatedText) lastUpdatedText.textContent = 'Update failed';
+          const retryButton = document.getElementById('weatherRetryButton');
+          if (retryButton) {
+            retryButton.addEventListener('click', () => {
+              loadWeather({ forced: true });
+            });
+          }
+        }
+
+        function renderWeather(data) {
+          const parsedLocation = parseLocation(data.city);
+          const city = parsedLocation.city;
+          const region = formatRegion(data.region || parsedLocation.region);
+          const timezone = formatTimezone(data.timezone);
+          const localTime = formatLocalTime(data.localTime, data.timezone);
+          const lastUpdatedLabel = formatLastUpdated(
+            data.fetchedAt || Date.now()
+          );
+          const refreshInterval = sanitizeNumber(
+            data.refreshIntervalMinutes,
+            DEFAULT_REFRESH_MINUTES
+          );
+
+          const currentTempRaw = data.temperature?.current;
+          const feelsLikeRaw = data.temperature?.feelsLike;
+          const currentTemp = Number.isFinite(currentTempRaw)
+            ? Math.round(currentTempRaw)
+            : null;
+          const feelsLike = Number.isFinite(feelsLikeRaw)
+            ? Math.round(feelsLikeRaw)
+            : null;
+          const conditionDescription =
+            data.conditions?.description || 'Waiting for conditions';
+          const conditionNarrative =
+            data.conditions?.narrative && data.conditions.narrative.length
+              ? data.conditions.narrative
+              : lastUpdatedLabel !== '—'
+              ? `Updated ${lastUpdatedLabel}. Forecast prose arriving shortly.`
+              : 'Forecast prose arriving shortly.';
+          const forecastHighRaw = data.forecast?.high;
+          const forecastLowRaw = data.forecast?.low;
+          const forecastHigh = Number.isFinite(forecastHighRaw)
+            ? Math.round(forecastHighRaw)
+            : null;
+          const forecastLow = Number.isFinite(forecastLowRaw)
+            ? Math.round(forecastLowRaw)
+            : null;
+
+          infoCard.innerHTML = `
+            <div class="info-card__header">
+              <div>
+                <h1 class="info-card__city">${escapeHtml(city)}</h1>
+                ${
+                  region
+                    ? `<p class="info-card__region">${escapeHtml(region)}</p>`
+                    : ''
+                }
+              </div>
+              ${
+                timezone
+                  ? `<span class="info-card__timezone">${escapeHtml(
+                      timezone
+                    )}</span>`
+                  : ''
+              }
+            </div>
+            <div class="info-card__body">
+              <div>
+                <p class="info-card__temp">${
+                  currentTemp !== null ? `${currentTemp}°` : '—'
+                }</p>
+                <p class="info-card__feels">Feels like ${
+                  feelsLike !== null ? `${feelsLike}°` : '—'
+                }</p>
+              </div>
+              <div class="info-card__details">
+                <p class="info-card__condition">${escapeHtml(
+                  conditionDescription
+                )}</p>
+                <p class="info-card__text" data-role="local-time">Local time · ${escapeHtml(
+                  localTime
+                )}</p>
+                ${
+                  forecastHigh !== null && forecastLow !== null
+                    ? `<p class="info-card__text">High ${escapeHtml(
+                        String(forecastHigh)
+                      )}° · Low ${escapeHtml(String(forecastLow))}°</p>`
+                    : ''
+                }
+              </div>
+            </div>
+            <div class="info-card__footer">
+              ${escapeHtml(conditionNarrative)}
+            </div>
+          `;
+
+          metricsCard.innerHTML = `
+            <div class="metrics-card__header">
+              <h2 class="metrics-card__title">Atmospheric Scorecard</h2>
+              <span class="metrics-card__badge">Metrics</span>
+            </div>
+            <div class="metrics-card__list">
+              ${buildMetricsMarkup(resolveMetrics(data.metrics))}
+            </div>
+          `;
+
+          const locationLabel = [city, region].filter(Boolean).join(', ');
+          if (locationText) {
+            locationText.textContent =
+              locationLabel ||
+              DEFAULT_LOCATION_NAME ||
+              'Awaiting location details';
+          }
+          if (refreshText) {
+            refreshText.textContent = `Auto-refresh every ${refreshInterval} min`;
+          }
+          if (lastUpdatedText) {
+            lastUpdatedText.textContent =
+              lastUpdatedLabel === '—'
+                ? 'Updated moments ago'
+                : `Updated ${lastUpdatedLabel}`;
+          }
+
+          const sceneKey = determineScene(data);
+          setVideoScene(sceneKey);
+          setupLocalTimeTicker(data);
+
+          return refreshInterval;
+        }
+
+        function scheduleNextFetch(minutes, fromTimestamp = Date.now()) {
+          const intervalMinutes = sanitizeNumber(
+            minutes,
+            DEFAULT_REFRESH_MINUTES
+          );
+          const intervalMs = intervalMinutes * 60 * 1000;
+          if (refreshTimerId) {
+            window.clearTimeout(refreshTimerId);
+            refreshTimerId = null;
+          }
+          if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+            return;
+          }
+          const lastTimestamp = Number.isFinite(fromTimestamp)
+            ? fromTimestamp
+            : Date.now();
+          const targetTime = lastTimestamp + intervalMs;
+          const delay = Math.max(targetTime - Date.now(), 0);
+          refreshTimerId = window.setTimeout(() => {
+            loadWeather({ silent: true, forced: true });
+          }, delay);
+          lastRefreshMinutes = intervalMinutes;
+        }
+
+        //
+        // --- THIS IS THE REPLACED FUNCTION ---
+        //
+        async function loadWeather({ silent = false, forced = false } = {}) {
+          const configuredMinutes = sanitizeNumber(
+            window.SKYARC_REFRESH_MINUTES,
+            DEFAULT_REFRESH_MINUTES
+          );
+          
+          const cacheEntry = readWeatherCache();
+          const hasCachePayload = cacheEntry?.payload;
+          const cacheStoredAtRaw = Number(cacheEntry?.storedAt);
+          const cacheStoredAt = Number.isFinite(cacheStoredAtRaw)
+            ? cacheStoredAtRaw
+            : null;
+          const cacheInterval = sanitizeNumber(
+            cacheEntry?.refreshIntervalMinutes,
+            configuredMinutes
+          );
+          const cacheTtlMs = cacheInterval * 60 * 1000;
+          const cacheAge = cacheStoredAt
+            ? Date.now() - cacheStoredAt
+            : Number.POSITIVE_INFINITY;
+          const cacheIsFresh = Boolean(hasCachePayload) && cacheAge < cacheTtlMs;
+
+          if (!forced && cacheIsFresh) {
+            lastRefreshMinutes = cacheInterval;
+            lastFetchTimestamp = cacheStoredAt;
+            renderWeather(cacheEntry.payload);
+            scheduleNextFetch(lastRefreshMinutes, cacheStoredAt);
+            return;
+          }
+
+          if (!silent) {
+            if (hasCachePayload) {
+              renderWeather(cacheEntry.payload);
+              lastRefreshMinutes = cacheInterval;
+              if (cacheStoredAt) {
+                lastFetchTimestamp = cacheStoredAt;
+              }
+            } else {
+              renderLoading();
+            }
+          } else if (lastUpdatedText) {
+            lastUpdatedText.textContent = 'Refreshing…';
+          }
+
+          // This is the main change!
+          // We fetch from our OWN API, not from AccuWeather.
+          try {
+            const res = await fetch('/api/weather', { cache: 'no-store' });
+
+            if (!res.ok) {
+              const errorJson = await res.json().catch(() => ({}));
+              throw new Error(
+                errorJson.message || `Weather service failed (${res.status})`
+              );
+            }
+
+            const payload = await res.json();
+
+            // The rest is the same!
+            const refreshInterval = renderWeather(payload);
+            lastFetchTimestamp = Date.now();
+            writeWeatherCache(payload, refreshInterval);
+            scheduleNextFetch(refreshInterval, lastFetchTimestamp);
+          } catch (error) {
+            console.error('Weather fetch failed', error);
+            renderError(error.message);
+            scheduleNextFetch(configuredMinutes, Date.now());
+          }
+        }
+
+        // --- All your original startup logic is kept ---
+
+        lastRefreshMinutes = sanitizeNumber(
+          window.SKYARC_REFRESH_MINUTES,
+          DEFAULT_REFRESH_MINUTES
+        );
+
+        const initialCache = readWeatherCache();
+        const initialPayload = initialCache?.payload;
+        const initialStoredAtRaw = Number(initialCache?.storedAt);
+        const initialStoredAt = Number.isFinite(initialStoredAtRaw)
+          ? initialStoredAtRaw
+          : null;
+        const initialInterval = sanitizeNumber(
+          initialCache?.refreshIntervalMinutes,
+          lastRefreshMinutes
+        );
+        const initialTtlMs = initialInterval * 60 * 1000;
+        const initialAge = initialStoredAt
+          ? Date.now() - initialStoredAt
+          : Number.POSITIVE_INFINITY;
+        const initialCacheFresh =
+          Boolean(initialPayload) && initialAge < initialTtlMs;
+
+        if (initialCacheFresh) {
+          lastRefreshMinutes = initialInterval;
+          lastFetchTimestamp = initialStoredAt;
+          renderWeather(initialPayload);
+          scheduleNextFetch(lastRefreshMinutes, initialStoredAt);
+        } else if (initialPayload) {
+          lastRefreshMinutes = initialInterval;
+          if (initialStoredAt) {
+            lastFetchTimestamp = initialStoredAt;
+          }
+          renderWeather(initialPayload);
+          loadWeather({ silent: true, forced: true });
+        } else {
+          renderLoading();
+          loadWeather({ forced: true });
+        }
+      })();
+    </script>
+  </body>
+</html>
